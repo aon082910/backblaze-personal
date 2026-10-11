@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.2.2-aon.1] - 2026-10-11
+
+First release of the Unraid fork (aon082910/backblaze-personal), on top of upstream 10.2.2.
+
+### Added
+
+- **Container tab.** Every environment setting the image reads at start can be changed in the browser: user and group, UMASK,
+  time zone, screen size, the Backblaze client pin and update switches, the web login, the VNC password, the encrypted
+  connection, ports, file manager, terminal, priority, shutdown grace time. A saved value is exported over the Docker variable
+  by a new entrypoint (`bb-entrypoint.sh`) before the base image's `/init` runs, and applies at the next start. A Restart button
+  stops the container cleanly (new `bb-restart` service) so its restart policy brings it back. Passwords are write-only. A
+  combination that would lock the page out, such as a web login with no password, is refused before it is saved.
+  `BB_IGNORE_UI_SETTINGS=1` ignores the saved values for one start.
+- **Update notices.** `bbupdate.py` checks once a day (`UPDATE_CHECK`, `UPDATE_CHECK_INTERVAL_HOURS`) for a newer image on
+  Docker Hub, a newer Wine, and a newer Backblaze client; shows the answers on the Container tab; and announces each new finding
+  once through the Settings tab's endpoints (new events `image_update`, `wine_update`, `client_update`).
+- **Upstream watch.** `.github/workflows/upstream-watch.yml` runs daily and files an `[update]` issue, and sends a push when
+  `NOTIFY_URL` is set, when upstream, Wine, WineHQ stable, the Backblaze client or the jlesage base moves. The **Release**
+  workflow tags and publishes. See `docs/MAINTAINING.md`.
+- **Unraid template** generated from the settings list (`tools/gen_template.py`): every setting is a field, with user 99, group
+  100, `--restart=unless-stopped` and four backup drives. See `docs/UNRAID.md`.
+- `PUID` and `PGID` as aliases for `USER_ID` and `GROUP_ID`.
+- `tests/test-container.py`, and a smoke test that boots the image with a saved setting and checks it won over Docker's.
+
+### Changed
+
+- Images publish to Docker Hub as `allornothing/backblaze-personal` instead of GHCR.
+- The About tab links to this fork's source and credits upstream.
+- `.gitattributes` pins line endings to LF: a Windows checkout with `core.autocrlf=true` produced CRLF shell scripts that
+  broke the image.
+
+### Removed
+
+- `CLEAN_TMP_DIR` and `X11VNC_EXTRA_OPTS` from the documented variables. The v4 base image always clears `/tmp` and uses
+  Xvnc, so neither did anything.
+
 ## [beta] - 2026-08-09
 
 This release is for the beta channel only (the `:beta` tag). It has everything in 10.2.1, plus

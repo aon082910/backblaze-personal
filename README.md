@@ -12,10 +12,36 @@ It runs the Backblaze client and starts a virtual X server and a VNC server with
 
 ⚠️ This project is not affiliated with Backblaze Inc. ⚠️
 
+## What this fork adds
+
+This is [aon082910/backblaze-personal](https://github.com/aon082910/backblaze-personal), a fork of
+[iamfoz/backblaze-64-personal-wine-container](https://github.com/iamfoz/backblaze-64-personal-wine-container) (AGPL-3.0), built for
+Unraid. Everything below the next heading is upstream's documentation and still applies. This fork changes:
+
+* **A Container tab** beside Monitor, Status, Tools, API and Settings. Every environment setting is editable in the browser:
+  the user and group the app runs as, UMASK, time zone, screen size, the Backblaze client pin and update switches, the web login,
+  VNC password, encrypted connection, ports, file manager and terminal, priority, shutdown grace time. A value saved there wins
+  over the Docker variable of the same name and applies at the next start; a **Restart** button does that start. Passwords are
+  write-only. Bad combinations (a web login with no password, a width not divisible by 4) are refused before they are saved.
+* **Update notices.** Each container checks daily for a newer image, a newer Wine and a newer Backblaze client, shows the answers
+  on the Container tab, and sends them through the notification endpoints you already set up (ntfy, Discord, Slack, Gotify,
+  Pushbullet, webhook). The repository itself watches upstream, Wine, WineHQ stable, Backblaze and the base image, files an
+  `[update]` issue and sends a push when something moves, and a **Release** workflow publishes when you decide to.
+  See [docs/MAINTAINING.md](docs/MAINTAINING.md).
+* **A complete Unraid template** (`templates/backblaze-personal.xml`, generated from the same settings list as the tab) with
+  Unraid's defaults: user 99, group 100, `--restart=unless-stopped`, four backup drives, every Wine switch. See
+  [docs/UNRAID.md](docs/UNRAID.md).
+* `PUID` / `PGID` accepted as aliases for `USER_ID` / `GROUP_ID`; `BB_IGNORE_UI_SETTINGS=1` ignores the saved values for one start.
+* Images are published to Docker Hub as `allornothing/backblaze-personal` (tags `latest`, `latest-patched`, `beta`, `ubuntu26`,
+  and versions such as `v10.2.2-aon.1`).
+* Dropped from the variable table: `CLEAN_TMP_DIR` and `X11VNC_EXTRA_OPTS`. The v4 base image always clears `/tmp` and uses
+  Xvnc, so neither did anything.
+
 ## Table of Content
 
    * **[Backblaze 64 Personal Wine Community Container](#backblaze-64-personal-wine-community-container)**
       * [Table of Content](#table-of-content)
+      * [What this fork adds](#what-this-fork-adds)
       * [Project Status](#project-status)
       * [Known Limitations](#known-limitations)
       * [Docker Images](#docker-images)
@@ -170,15 +196,19 @@ Environment variables can be set by adding one or more arguments `-e "<VAR>=<VAL
 |`APP_NICENESS`| Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  By default, niceness is not set, meaning that the default niceness of 0 is used.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | (unset) |
 |`USER_ID`| When mounting docker-volumes, permission issues can arise between the docker host and the container. You can pass the User_ID permissions to the container with this variable. | `1000` |
 |`GROUP_ID`| When mounting docker-volumes, permission issues can arise between the docker host and the container. You can pass the Group_ID permissions to the container with this variable. | `1000` |
-|`CLEAN_TMP_DIR`| When set to `1`, all files in the `/tmp` directory are deleted during the container startup. | `1` |
 |`DISPLAY_WIDTH`| Width (in pixels) of the virtual screen's window. (Has to be divisible by 4) | `900` |
 |`DISPLAY_HEIGHT`| Height (in pixels) of the virtual screen's window. (Has to be divisible by 4) | `700` |
 |`WEB_AUTHENTICATION`| When set to `1`, the web interface asks for a login before it lets anyone in. This requires `SECURE_CONNECTION=1` as well. Off by default, which means anything on the LAN that can reach the container can reach the monitor's controls. | `0` |
 |`SECURE_CONNECTION`| When set to `1`, an encrypted connection is used to access the application's GUI (either via a web browser or VNC client).  See the [Security](#security) section for more details. | `0` |
 |`VNC_PASSWORD`| Password needed to connect to the application's GUI.  See the [VNC Password](#vnc-password) section for more details. | (unset) |
-|`X11VNC_EXTRA_OPTS`| Extra options to pass to the x11vnc server running in the Docker container.  **WARNING**: For advanced users. Do not use unless you know what you are doing. | (unset) |
 |`ENABLE_CJK_FONT`| When set to `1`, open-source computer font `WenQuanYi Zen Hei` is installed.  This font contains a large range of Chinese/Japanese/Korean characters. | `0` |
 |`STARTUP_LOGFILE`| The location for writing logs of the startup script, responsible for installing and starting the Backblaze app.  The default path is also backed up to Backblaze. | `/config/wine/dosdevices/c:/backblaze-wine-startapp.log` |
+|`PUID`, `PGID`| Fork addition. Aliases for `USER_ID` and `GROUP_ID`, the names most images use. When set they stand in for those two; a value saved on the Container tab still wins. | (unset) |
+|`UPDATE_CHECK`| Fork addition. When `true`, the container checks once a day whether a newer image, Wine or Backblaze client exists and reports it on the Container tab and through the notification endpoints. Only version numbers are fetched. | `true` |
+|`UPDATE_CHECK_INTERVAL_HOURS`| Fork addition. Hours between those checks, 1 to 168. | `24` |
+|`AON_IMAGE_REPO`| Fork addition. The Docker Hub repository the image check compares against. Change it only if you publish your own build. | `allornothing/backblaze-personal` |
+|`BB_IGNORE_UI_SETTINGS`| Fork addition. When `1`, values saved on the Container tab are ignored for this start. The way back in after a bad choice, such as a web login with a password you mistyped. Set it back to `0` afterwards. | `0` |
+|`DARK_MODE`, `SUP_GROUP_IDS`, `KEEP_APP_RUNNING`, `SERVICES_GRACETIME`, `WEB_FILE_MANAGER`, `WEB_TERMINAL`, `WEB_NOTIFICATION`, `WEB_LOCALHOST_ONLY`, `VNC_LOCALHOST_ONLY`, `WEB_LISTENING_PORT`, `VNC_LISTENING_PORT`, `WEB_AUTHENTICATION_*`, `SECURE_CONNECTION_VNC_METHOD`| The base image's own variables. They always worked; the Container tab and the template now list them with their limits. See [jlesage/docker-baseimage-gui](https://github.com/jlesage/docker-baseimage-gui#environment-variables). | the base image's |
 
 On Unraid, the edit window shows the template the container was installed from, not the
 current one, so a variable added since then (such as `BACKBLAZE_VERSION` or
@@ -585,7 +615,7 @@ comfortable with what is in it.
 ## Beta Image
 
 ```
-ghcr.io/iamfoz/backblaze-personal-wine:beta
+allornothing/backblaze-personal:beta
 ```
 
 The beta carries the Wine upload-speed fix already built in, so uploads run at full
@@ -619,7 +649,7 @@ applied. Both are available at those locations.
 ## Patched Wine
 
 ```
-ghcr.io/iamfoz/backblaze-personal-wine:latest-patched
+allornothing/backblaze-personal:latest-patched
 ```
 
 `latest` runs WineHQ's own stable Wine, unchanged. `latest-patched` is the same
@@ -803,7 +833,7 @@ container.
         --name Backblaze64 \
         -v "[backup folder]/:/drive_d/" \
         -v "[config folder]/:/config/" \
-        ghcr.io/iamfoz/backblaze-personal-wine:latest
+        allornothing/backblaze-personal:latest
     ````
 
 1. Open the Web Interface (on the port you specified in the docker run command, in this example 8080):
@@ -896,7 +926,7 @@ container.
         --name Backblaze64 \
         -v "[backup folder]/:/drive_d/" \
         -v "[config folder]/:/config/" \
-        ghcr.io/iamfoz/backblaze-personal-wine:latest
+        allornothing/backblaze-personal:latest
     ````
 
   - **Additional 'black screen' troubleshooting for Synology devices**:
@@ -912,7 +942,7 @@ container.
         --name Backblaze64 \
         -v "[backup folder]/:/drive_d/" \
         -v "[config folder]/:/config/" \
-        ghcr.io/iamfoz/backblaze-personal-wine:latest
+        allornothing/backblaze-personal:latest
     ````
 
   - **Still stuck?** Open an issue on [this project's tracker](https://github.com/iamfoz/backblaze-64-personal-wine-container/issues), including the container log and the output of `docker exec <container> bb-health` and
@@ -937,6 +967,8 @@ The `--init` flag installs a tiny process that can do a few init things like wai
     ````
 
 # Credits
+
+This fork, **backblaze-personal**, is maintained by [@aon082910](https://github.com/aon082910) for Unraid. It is a fork of [@iamfoz](https://github.com/iamfoz)'s project below, under the same licence (AGPL-3.0); upstream's copyright notices are kept and the changes are in this repository's history. The source of the running container is linked from its About tab.
 
 **Backblaze 64** is a 64-bit / Windows 10 fork maintained by [@iamfoz](https://github.com/iamfoz/backblaze-64-personal-wine-container), re-engineered to install and run Backblaze Personal Backup 10.x (which dropped 32-bit and pre-Windows 10 support).
 

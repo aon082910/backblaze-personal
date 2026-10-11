@@ -1,0 +1,124 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Backblaze-Personal</Name>
+  <Repository>allornothing/backblaze-personal:latest</Repository>
+  <Registry>https://hub.docker.com/r/allornothing/backblaze-personal</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/aon082910/backblaze-personal/issues</Support>
+  <Project>https://github.com/aon082910/backblaze-personal</Project>
+  <TemplateURL>https://raw.githubusercontent.com/aon082910/AoN-Unraid-Apps/main/Backblaze-Personal/backblaze-personal.xml</TemplateURL>
+  <ReadMe>https://github.com/aon082910/backblaze-personal/blob/main/docs/UNRAID.md</ReadMe>
+  <Icon>https://cdn.jsdelivr.net/gh/selfhst/icons/png/backblaze.png</Icon>
+  <WebUI>http://[IP]:[PORT:5800]/</WebUI>
+  <Overview>
+Backblaze Personal Backup running under Wine in a container, with a browser desktop (no VNC client needed) and a
+monitor, status and settings dashboard beside it. This is a fork of iamfoz/backblaze-64-personal-wine-container with a
+Container tab that changes every setting below from the browser, update notices for the image, Wine and the
+Backblaze client, and a template that exposes every option.
+
+Not affiliated with or supported by Backblaze. The container needs read-write access to what it backs up: Backblaze writes
+a .bzvol folder into the root of every drive. Map each folder you want protected to /drive_d, /drive_e and so on.
+
+Image tags (edit the Repository field to switch): latest = WineHQ stable, pins client 10.0.1.1069; latest-patched = the
+fork's patched Wine, fixes on, follows the newest client; beta = patched Wine with the performance patches on, weekly;
+ubuntu26 = early access. On a patched or beta tag, clear Pin the Backblaze client.
+
+First start: open the Web UI, sign in to your Backblaze account in the desktop, and let the first backup run. Nothing is
+sent to this project; update checks fetch version numbers from Docker Hub, WineHQ and Backblaze only.
+
+Moving from iamfoz's template: point Config at the same appdata folder and the Wine prefix and your Backblaze identity carry
+over. Do not run two containers on one folder.
+  </Overview>
+  <Category>Backup: Tools:</Category>
+  <ExtraSearchTerms>backblaze backup wine cloud offsite personal b2 vnc novnc</ExtraSearchTerms>
+  <Changes>
+### Fork 10.2.2-aon.1
+- Container tab: every environment setting is editable in the browser (user and group, time zone, screen, web login, VNC
+  password, client pin, ports, priority...), applied at the next start, with a Restart button.
+- Update notices: once a day the container checks for a newer image, Wine and Backblaze client and tells you through the
+  notification endpoints in Settings. The repository also files an issue and sends a push when upstream, Wine, the
+  Backblaze client or the base image move.
+- Template: every setting is a field, with Unraid defaults (99:100, restart policy unless-stopped).
+- PUID and PGID are accepted as aliases for USER_ID and GROUP_ID.
+- BB_IGNORE_UI_SETTINGS=1 ignores the saved values for one start, the way back in after a bad choice.
+  </Changes>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+
+  <!-- Ports -->
+  <Config Name="Web UI Port" Target="5800" Default="5800" Mode="tcp" Description="Port for the browser desktop, the monitor and the Container tab. With a custom network (br0) or host networking set Web port inside the container instead." Type="Port" Display="always" Required="true" Mask="false">5800</Config>
+  <Config Name="VNC Port" Target="5900" Default="5900" Mode="tcp" Description="Port for a VNC client. Leave unmapped if you only use the browser." Type="Port" Display="always" Required="false" Mask="false">5900</Config>
+
+  <!-- Paths -->
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/backblaze-personal" Mode="rw" Description="Persistent storage for the Wine prefix, your Backblaze identity and every setting saved on the Container tab. Must survive restarts. Back this folder up." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/backblaze-personal</Config>
+  <Config Name="Backup Source (Drive D)" Target="/drive_d/" Default="" Mode="rw" Description="Optional: a host folder to back up as drive D:. Must be read-write: Backblaze creates a .bzvol folder in the drive's root. For more drives add another Path with Container Path /drive_h/ and so on up to /drive_z/." Type="Path" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Backup Source (Drive E)" Target="/drive_e/" Default="" Mode="rw" Description="Optional: a host folder to back up as drive E:. Must be read-write: Backblaze creates a .bzvol folder in the drive's root. For more drives add another Path with Container Path /drive_h/ and so on up to /drive_z/." Type="Path" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Backup Source (Drive F)" Target="/drive_f/" Default="" Mode="rw" Description="Optional: a host folder to back up as drive F:. Must be read-write: Backblaze creates a .bzvol folder in the drive's root. For more drives add another Path with Container Path /drive_h/ and so on up to /drive_z/." Type="Path" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Backup Source (Drive G)" Target="/drive_g/" Default="" Mode="rw" Description="Optional: a host folder to back up as drive G:. Must be read-write: Backblaze creates a .bzvol folder in the drive's root. For more drives add another Path with Container Path /drive_h/ and so on up to /drive_z/." Type="Path" Display="advanced" Required="false" Mask="false"></Config>
+
+  <!-- Identity and files -->
+  <Config Name="User ID" Target="USER_ID" Default="99" Mode="" Description="The user ID the app runs as. It must own the files it backs up, because Backblaze writes a .bzvol folder into the root of every drive. Find yours with: id -u Not 0. Files already in /config keep their old owner until the container takes ownership at start. (1 to 65534)" Type="Variable" Display="always" Required="false" Mask="false">99</Config>
+  <Config Name="Group ID" Target="GROUP_ID" Default="100" Mode="" Description="The group ID the app runs as. Find yours with: id -g (1 to 65534)" Type="Variable" Display="always" Required="false" Mask="false">100</Config>
+  <Config Name="Supplementary group IDs" Target="SUP_GROUP_IDS" Default="" Mode="" Description="Comma-separated extra groups, for a share that is group-readable only. Empty for none." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="File creation mask" Target="UMASK" Default="0022" Mode="" Description="Octal mask for files the app creates. 0022 is readable by everyone, writable by the owner; 0000 is writable by everyone, the usual Unraid choice." Type="Variable" Display="advanced" Required="false" Mask="false">0022</Config>
+  <Config Name="Time zone" Target="TZ" Default="Etc/UTC" Mode="" Description="A tz database name such as America/New_York. Backup schedules, quiet hours and log times follow it." Type="Variable" Display="always" Required="false" Mask="false">Etc/UTC</Config>
+
+  <!-- Display -->
+  <Config Name="Screen width" Target="DISPLAY_WIDTH" Default="900" Mode="" Description="Width in pixels of the virtual screen. Must be divisible by 4. (400 to 7680)" Type="Variable" Display="advanced" Required="false" Mask="false">900</Config>
+  <Config Name="Screen height" Target="DISPLAY_HEIGHT" Default="700" Mode="" Description="Height in pixels of the virtual screen. Must be divisible by 4. (300 to 4320)" Type="Variable" Display="advanced" Required="false" Mask="false">700</Config>
+  <Config Name="Disable Wine's virtual desktop" Target="DISABLE_VIRTUAL_DESKTOP" Default="false|true" Mode="" Description="Draw Backblaze's windows directly on the screen instead of inside one Wine desktop window." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="Dark mode" Target="DARK_MODE" Default="0|1" Mode="" Description="Use a dark theme for the browser desktop's own controls. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Chinese, Japanese and Korean font" Target="ENABLE_CJK_FONT" Default="0|1" Mode="" Description="Installs the WenQuanYi Zen Hei font at start, for file names in those scripts. Needs internet access at start. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+
+  <!-- Backblaze client -->
+  <Config Name="Pin the Backblaze client" Target="BACKBLAZE_VERSION" Default="10.0.1.1069" Mode="" Description="Run exactly this client version, for example 10.0.1.1069. At each start the container installs it if a different one is there, newer or older, and skips the update check. Empty lets the two switches below decide. The stable image pins 10.0.1.1069 because 10.0.3.1075 completes no backup pass under WineHQ's Wine; the patched and beta images follow Backblaze's newest. Pinning a client that needs the Wine service-token fix on an image without it will stall backups." Type="Variable" Display="always" Required="false" Mask="false">10.0.1.1069</Config>
+  <Config Name="Update the client at every start" Target="FORCE_LATEST_UPDATE" Default="true|false" Mode="" Description="Download the newest Backblaze client at each start. Off keeps the installed version and skips the check." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="Skip the update check at start" Target="DISABLE_AUTOUPDATE" Default="false|true" Mode="" Description="Start faster by not asking Backblaze for a newer client. The client's own updater is separate." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+
+  <!-- Web interface -->
+  <Config Name="Web port inside the container" Target="WEB_LISTENING_PORT" Default="5800" Mode="" Description="Change only when the container shares the host's network and 5800 is taken. With a bridge network leave it and change the port mapping instead. (1 to 65535)" Type="Variable" Display="advanced" Required="false" Mask="false">5800</Config>
+  <Config Name="VNC port inside the container" Target="VNC_LISTENING_PORT" Default="5900" Mode="" Description="As above, for VNC clients. (1 to 65535)" Type="Variable" Display="advanced" Required="false" Mask="false">5900</Config>
+  <Config Name="File manager in the browser" Target="WEB_FILE_MANAGER" Default="0|1" Mode="" Description="Adds a file manager to the desktop's side panel, for looking at what is mapped into the container. Anyone who can open the desktop can then browse the allowed paths. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="File manager: allowed paths" Target="WEB_FILE_MANAGER_ALLOWED_PATHS" Default="AUTO" Mode="" Description="AUTO allows the mapped folders. Otherwise a comma-separated list of paths." Type="Variable" Display="advanced" Required="false" Mask="false">AUTO</Config>
+  <Config Name="File manager: denied paths" Target="WEB_FILE_MANAGER_DENIED_PATHS" Default="" Mode="" Description="Comma-separated paths the file manager must not show." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Terminal in the browser" Target="WEB_TERMINAL" Default="0|1" Mode="" Description="Adds a shell to the desktop's side panel. Anyone who can open the desktop gets a shell as the app's user. Turn the web login on first. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Desktop notifications" Target="WEB_NOTIFICATION" Default="0|1" Mode="" Description="Show the desktop's own notifications as browser notifications. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Clipboard sync" Target="WEB_HOST_CLIPBOARD_SYNC" Default="1|0" Mode="" Description="Copy and paste between your computer and the desktop. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
+  <Config Name="Web interface on localhost only" Target="WEB_LOCALHOST_ONLY" Default="0|1" Mode="" Description="Listen on 127.0.0.1 only, for use behind a reverse proxy in the same network namespace. Nothing outside the container can reach the desktop, or this page, while it is on. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="VNC on localhost only" Target="VNC_LOCALHOST_ONLY" Default="0|1" Mode="" Description="Do not accept VNC clients from outside the container. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+
+  <!-- Security -->
+  <Config Name="Encrypted connection" Target="SECURE_CONNECTION" Default="0|1" Mode="" Description="Serve the desktop over HTTPS and VNC over TLS, with a certificate made on first start. Needed for the web login unless you allow the insecure one. (1 is on, 0 is off.)" Type="Variable" Display="always" Required="false" Mask="false">0</Config>
+  <Config Name="VNC encryption method" Target="SECURE_CONNECTION_VNC_METHOD" Default="SSL|TLS" Mode="" Description="SSL wraps the connection (stunnel); TLS uses VNC's own upgrade." Type="Variable" Display="advanced" Required="false" Mask="false">SSL</Config>
+  <Config Name="Web login" Target="WEB_AUTHENTICATION" Default="0|1" Mode="" Description="Ask for a username and password before the desktop, this page and the monitor open. Off by default, which leaves the monitor's controls open to anything on your network. Set the username and password below first. If you lock yourself out, set BB_IGNORE_UI_SETTINGS=1 on the container, restart it, fix the settings here, remove the variable. (1 is on, 0 is off.)" Type="Variable" Display="always" Required="false" Mask="false">0</Config>
+  <Config Name="Web login username" Target="WEB_AUTHENTICATION_USERNAME" Default="" Mode="" Description="The username for the web login." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Web login password" Target="WEB_AUTHENTICATION_PASSWORD" Default="" Mode="" Description="The password for the web login. It is stored in the settings file on your appdata share and is never shown again." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Allow the web login over plain HTTP" Target="WEB_AUTHENTICATION_ALLOW_INSECURE" Default="0|1" Mode="" Description="Lets the login work without the encrypted connection. The password then crosses your network in the clear. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Login lifetime (hours)" Target="WEB_AUTHENTICATION_TOKEN_VALIDITY_TIME" Default="24" Mode="" Description="How long a browser stays logged in. (1 to 8760)" Type="Variable" Display="advanced" Required="false" Mask="false">24</Config>
+  <Config Name="VNC password" Target="VNC_PASSWORD" Default="" Mode="" Description="Password for VNC clients and the browser desktop. VNC passwords are cut to 8 characters by the protocol. Stored in the settings file and never shown again." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="API origins" Target="API_CORS_ORIGINS" Default="" Mode="" Description="Comma-separated origins a browser page may call the HTTP API from. Empty allows none. There is no wildcard." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <!-- Runtime -->
+  <Config Name="Priority (niceness)" Target="APP_NICENESS" Default="0" Mode="" Description="-20 is the highest priority, 19 the lowest. Lower the priority to keep a busy server responsive. A negative value needs the container to be started with --cap-add=SYS_NICE. (-20 to 19)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Restart the app when it exits" Target="KEEP_APP_RUNNING" Default="0|1" Mode="" Description="When Backblaze's launcher exits, start it again instead of stopping the container. (1 is on, 0 is off.)" Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Shutdown grace time (ms)" Target="SERVICES_GRACETIME" Default="5000" Mode="" Description="How long each service gets to stop before it is killed when the container stops. Raise it if a stop leaves the client's database in recovery. (0 to 600000)" Type="Variable" Display="advanced" Required="false" Mask="false">5000</Config>
+
+  <!-- Update notices -->
+  <Config Name="Check for updates" Target="UPDATE_CHECK" Default="true|false" Mode="" Description="Once a day, ask Docker Hub, WineHQ and Backblaze whether anything newer exists. Only version numbers are fetched; nothing about your backup leaves the container." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="Hours between checks" Target="UPDATE_CHECK_INTERVAL_HOURS" Default="24" Mode="" Description="How often the check runs. (1 to 168)" Type="Variable" Display="advanced" Required="false" Mask="false">24</Config>
+
+  <!-- Recovery, Wine patches and escape hatch -->
+  <Config Name="Enable watchdog" Target="ENABLE_WATCHDOG" Default="false|true" Mode="" Description="Recover automatically from the known stalls: clear a stale four-hour lock left by an out-of-memory kill and stop a pass stuck on a lost upload child. Every action is logged. Off by default because it deletes a lock file and kills processes. The Settings tab has a switch that overrides this without a restart." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="Datasets as folders" Target="MOUNTPOINTS_AS_DIRS" Default="" Mode="" Description="Patched and beta tags only. Which drives show the separate filesystems inside them (ZFS datasets, a mounted cache pool) as ordinary folders so the client backs them up: all, or drive letters such as d,e. Empty for none. Without it the client skips every dataset inside a drive. A dataset already backed up under its own letter uploads again under the new path." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Wine: upload writability fix" Target="WINE_SOCK_SEND_READY" Default="1|0" Mode="" Description="Patched and beta tags only. Lifts the stock-Wine cap of about 140 KB/s on a single upload stream (WineHQ bug 59893). The Settings tab overrides it." Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
+  <Config Name="Wine: FD_WRITE re-arm" Target="WINE_SOCK_FDWRITE_REARM" Default="0|1" Mode="" Description="Patched and beta tags only. About three times the upload rate on high-latency links; a workaround that differs from Windows and needs the writability fix. The beta image turns it on; :latest-patched leaves it off." Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Wine: service token" Target="WINE_SERVICE_TOKEN" Default="1|0" Mode="" Description="Patched and beta tags only. Gives services the LocalSystem group, which client 10.0.3.1075 and later need to complete a backup pass. Off means the client must stay on 10.0.1.1069." Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
+  <Config Name="Wine: OFD file locks" Target="WINE_OFD_LOCKS" Default="1|0" Mode="" Description="Patched and beta tags only. Stops the client's database leaking file descriptors until nothing can open a file." Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
+  <Config Name="Wine: case-sensitivity cache" Target="WINE_CASE_CACHE" Default="0|1" Mode="" Description="Patched and beta tags only. Decides case sensitivity once per device instead of after every failed lookup; large speed-up on Unraid user shares. The beta image turns it on; :latest-patched leaves it off." Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+  <Config Name="Ignore saved Container-tab values" Target="BB_IGNORE_UI_SETTINGS" Default="0|1" Mode="" Description="Set to 1 for one start to ignore everything saved on the Container tab, for example after locking yourself out with a web login. Set it back to 0 afterwards." Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+</Container>

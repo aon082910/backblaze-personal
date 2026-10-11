@@ -1,0 +1,26 @@
+#!/bin/sh
+# Lets the Container tab restart the container.
+#
+# This service is marked shutdown_on_terminate (see the file beside it), so when it
+# exits the supervisor stops every service and the container exits cleanly. Docker
+# then brings it back if the container has a restart policy (the Unraid template sets
+# --restart=unless-stopped). Without one the container simply stops, which the page
+# says before it lets anyone press the button.
+#
+# The web service is not root and cannot signal PID 1, so it asks by creating a file
+# and this service, which the supervisor can stop, does the exiting.
+#
+# This directory alone does not make the service run: the empty marker
+# ../default/bb-restart.dep registers it (same trap as bb-watchdog).
+set -u
+
+REQ=/tmp/.bb-restart-request
+rm -f "$REQ"
+while :; do
+    if [ -e "$REQ" ]; then
+        echo "[bb-restart] restart requested from the Container tab: stopping the container"
+        rm -f "$REQ"
+        exit 0
+    fi
+    sleep 2
+done

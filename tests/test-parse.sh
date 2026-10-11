@@ -153,6 +153,25 @@ for node in tree.body:
 print(n)
 PY
 )"
+# The Container tab's page is its own module (a raw string, so the script needs no escaping),
+# which the extraction above cannot evaluate: it is a function call. Its PAGE literal is read
+# directly instead.
+CBLOCKS="$(python3 - "$ROOT/rootfs/usr/local/lib/bb-monitor/bbcontainer_page.py" "$JSDIR" <<'PY'
+import ast, re, sys
+tree = ast.parse(open(sys.argv[1], encoding="utf-8").read())
+n = 0
+for node in tree.body:
+    if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "PAGE":
+        val = ast.literal_eval(node.value)
+        for m in re.finditer(r"<script>(.*?)</script>", val, re.S):
+            n += 1
+            with open("%s/container_block%02d.js" % (sys.argv[2], n), "w", encoding="utf-8") as fh:
+                fh.write(m.group(1))
+print(n)
+PY
+)"
+[ "$CBLOCKS" = "0" ] && bad "no <script> block was extracted from bbcontainer_page.py, which cannot be right"
+BLOCKS=$((BLOCKS + CBLOCKS))
 if [ "$BLOCKS" = "0" ]; then
     bad "no <script> blocks were extracted from bb-monitor-web, which cannot be right"
 elif command -v node >/dev/null 2>&1; then

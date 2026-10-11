@@ -1,0 +1,84 @@
+name: Release
+
+# The "push the update" button. Run it from the Actions tab (or the link in an
+# "[update]" notification) when you are ready to publish. It does three things:
+#
+#   1. optionally moves the Wine the beta and :latest-patched build to a new tag
+#   2. tags the release (this fork's version is <upstream version>-aon.<n>)
+#   3. starts the "Docker Build and Push" workflow on that tag, which tests, builds and
+#      pushes allornothing/backblaze-personal:latest, :ubuntu24, :ubuntu26,
+#      :latest-patched, :beta and the version tag
+#
+# Unraid then shows "update ready" for the container on its Docker tab on its own
+# schedule. Nothing is pushed to a running server.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag, for example v10.2.2-aon.1'
+        required: true
+        type: string
+      wine_ref:
+        description: 'Optional: move the beta and :latest-patched to this Wine tag (wine-11.20). Empty keeps the current pins'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the inputs
+        env:
+          VERSION: ${{ inputs.version }}
+          WINE_REF: ${{ inputs.wine_ref }}
+        run: |
+          set -eu
+          printf '%s' "$VERSION"  | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-aon\.[0-9]+)?$' \
+            || { echo "version must look like v10.2.2-aon.1" >&2; exit 1; }
+          [ -z "$WINE_REF" ] || printf '%s' "$WINE_REF" | grep -Eq '^wine-[0-9]+\.[0-9]+$' \
+            || { echo "wine_ref must look like wine-11.20" >&2; exit 1; }
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "tag $VERSION already exists" >&2; exit 1
+          fi
+
+      - name: Move the Wine pins
+        if: inputs.wine_ref != ''
+        env:
+          WINE_REF: ${{ inputs.wine_ref }}
+        run: |
+          set -eu
+          sed -i "s/^WINE_REF=.*/WINE_REF=${WINE_REF}/" patches/promoted
+          sed -i "s/^ARG WINE_REF=.*/ARG WINE_REF=${WINE_REF}/" Dockerfile.beta
+          git diff --stat
+          git config user.name  "release"
+          git config user.email "release@users.noreply.github.com"
+          git commit -am "Move the Wine pins to ${WINE_REF}"
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -eu
+          git config user.name  "release"
+          git config user.email "release@users.noreply.github.com"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "$VERSION"
+          # A push made with the workflow token does not start other workflows, so
+          # start the publish by hand against the tag. github.ref is then the tag,
+          # which is what makes it push :latest and the version tag.
+          gh workflow run docker-publish.yml --ref "$VERSION"
+          gh release create "$VERSION" --title "$VERSION" --generate-notes
+          echo "Started Docker Build and Push for $VERSION: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/docker-publish.yml"

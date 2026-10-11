@@ -1,0 +1,6 @@
+# Everything in this repo runs on Linux (the image, CI, Unraid). A checkout with CRLF breaks
+# every shell script in it, so line endings are pinned to LF regardless of the platform.
+* text=auto eol=lf
+*.png binary
+*.gif binary
+*.jpg binary

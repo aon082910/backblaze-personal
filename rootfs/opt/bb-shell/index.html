@@ -68,6 +68,7 @@
   <button role="tab" data-pane="tools" aria-controls="pane-tools" aria-selected="false">Tools</button>
   <button role="tab" data-pane="api" aria-controls="pane-api" aria-selected="false">API</button>
   <button role="tab" data-pane="settings" aria-controls="pane-settings" aria-selected="false">Settings</button>
+  <button role="tab" data-pane="container" aria-controls="pane-container" aria-selected="false">Container</button>
   <span id="brand">Backblaze 64</span>
 </div>
 </div>
@@ -114,6 +115,11 @@
 <iframe id="pane-settings" class="pane" role="tabpanel" hidden
         title="Settings"></iframe>
 
+<!-- The container's own settings (user, time zone, screen, web login...) and its
+     update notices. Behind the login: it holds the VNC and web passwords' inputs. -->
+<iframe id="pane-container" class="pane" role="tabpanel" hidden
+        title="Container"></iframe>
+
 <script>
 (function(){
   var MON = '/monitor/';
@@ -121,16 +127,18 @@
   var TOOLS = '/monitor/tools';
   var API = '/monitor/apikeys';
   var SETTINGS = '/monitor/settings';
-  var ORDER = ['desktop', 'monitor', 'status', 'tools', 'api', 'settings'];   // the digit keys, in tab order
+  var CONTAINER = '/monitor/container';
+  var ORDER = ['desktop', 'monitor', 'status', 'tools', 'api', 'settings', 'container'];   // the digit keys, in tab order
   var tabs = Array.prototype.slice.call(document.querySelectorAll('#tabs button'));
   var panes = { desktop: document.getElementById('pane-desktop'),
                 monitor: document.getElementById('pane-monitor'),
                 status: document.getElementById('pane-status'),
                 tools: document.getElementById('pane-tools'),
                 api: document.getElementById('pane-api'),
-                settings: document.getElementById('pane-settings') };
-  var loaded = { desktop: true, monitor: false, status: false, tools: false, api: false, settings: false };
-  var SRC = { monitor: MON, status: STATUS, tools: TOOLS, api: API, settings: SETTINGS };
+                settings: document.getElementById('pane-settings'),
+                container: document.getElementById('pane-container') };
+  var loaded = { desktop: true, monitor: false, status: false, tools: false, api: false, settings: false, container: false };
+  var SRC = { monitor: MON, status: STATUS, tools: TOOLS, api: API, settings: SETTINGS, container: CONTAINER };
 
   function show(name){
     if(name === 'skipped') name = 'status';   // the tab's old name, in saved state and old links
@@ -201,12 +209,12 @@
   document.addEventListener('keydown', function(e){
     var tg = e.target && e.target.tagName;
     if(tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
-    if(e.key >= '1' && e.key <= '6') show(ORDER[Number(e.key) - 1]);
+    if(e.key >= '1' && e.key <= '7') show(ORDER[Number(e.key) - 1]);
   });
   window.addEventListener('message', function(e){
     if(e.origin !== location.origin) return;
     var m = e.data;
-    if(m && m.bb64 === 'tab' && m.n >= 1 && m.n <= 6) show(ORDER[m.n - 1]);
+    if(m && m.bb64 === 'tab' && m.n >= 1 && m.n <= 7) show(ORDER[m.n - 1]);
     // The Settings tab asks for the Monitor's settings. Show the Monitor, then
     // tell its frame. On the first visit the frame is still loading, so the
     // message waits for its load event.

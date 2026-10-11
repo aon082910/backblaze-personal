@@ -11,8 +11,15 @@ chmod +x /startapp.sh \
     /usr/local/bin/bb-monitor /usr/local/bin/bb-monitor-web \
     /usr/local/bin/bb-health /usr/local/bin/bb-watchdog /usr/local/bin/bb-version \
     /usr/local/bin/bb-doctor /usr/local/bin/bb-report /usr/local/bin/bb-apikey \
-    /usr/local/bin/bb-settings \
-    /etc/services.d/bb-watchdog/run /etc/services.d/bb-monitor-web/run
+    /usr/local/bin/bb-settings /usr/local/lib/bb-entrypoint.sh \
+    /etc/services.d/bb-watchdog/run /etc/services.d/bb-monitor-web/run \
+    /etc/services.d/bb-restart/run /etc/services.d/bb-restart/respawn \
+    /etc/services.d/bb-restart/shutdown_on_terminate
+
+# The supervisor RUNS a .dep marker that is executable, and an empty one fails with
+# "command failed (126)". A checkout on Windows marks every file executable, so a local
+# docker build would otherwise ship markers the supervisor cannot load.
+chmod 644 /etc/services.d/default/*.dep
 
 # Wire the web interface (bb-monitor-web, proxied from loopback) into the base
 # image's nginx server block. default_site.conf is included directly from
@@ -54,6 +61,10 @@ done
 grep -q "swap to absorb the peaks" /usr/local/bin/bb-doctor
 grep -q FROZEN /usr/local/bin/bb-health
 sh -n /usr/local/lib/bb-wine-switches.sh
+sh -n /usr/local/lib/bb-entrypoint.sh
+sh -n /etc/services.d/bb-restart/run
+grep -q bbcontainer /usr/local/lib/bb-entrypoint.sh
+test -e /etc/services.d/default/bb-restart.dep
 sh -n /usr/local/lib/bb-mountpoints.sh
 python3 -m py_compile /usr/local/bin/bb-report /usr/local/bin/bb-monitor-web
 grep -q _bzcli_settings /usr/local/bin/bb-report

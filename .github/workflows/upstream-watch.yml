@@ -1,0 +1,51 @@
+name: Upstream watch
+
+# Looks daily for anything this fork depends on that has moved (a new Wine, a new
+# WineHQ stable, a new Backblaze client, a new jlesage base, new commits or releases
+# from the upstream project) and files one "[update] ..." issue per finding. With
+# NOTIFY_URL set it also sends a push notification that links to the Release workflow,
+# which is how an update gets published.
+#
+# Add the notification target once, typing the value at the prompt (never in chat):
+#   gh secret set NOTIFY_URL  --repo aon082910/backblaze-personal
+#   gh secret set NOTIFY_KIND --repo aon082910/backblaze-personal   # ntfy (default), discord, slack, gotify or webhook
+# For ntfy the URL is the topic, for example https://ntfy.sh/<a-long-random-topic>.
+# GitHub's own mobile app also pings you for the issues, if you watch the repository.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print what would be filed and sent; file and send nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check what moved
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTIFY_URL: ${{ secrets.NOTIFY_URL }}
+          NOTIFY_KIND: ${{ secrets.NOTIFY_KIND }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: |
+          git config user.name  "upstream-watch"
+          git config user.email "upstream-watch@users.noreply.github.com"
+          python3 .github/scripts/upstream_watch.py

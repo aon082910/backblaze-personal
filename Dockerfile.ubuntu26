@@ -119,3 +119,14 @@ RUN --mount=type=bind,source=build,target=/build sh /build/finish-image.sh
 # start period covers the first run, which downloads and installs Backblaze.
 HEALTHCHECK --interval=5m --timeout=30s --start-period=15m --retries=2 \
     CMD /usr/local/bin/bb-health || exit 1
+
+# The entrypoint exports the values saved on the Container tab over the variables Docker
+# gave the container, then runs the base image's own command, so a setting changed in the
+# browser is in force from the first script /init runs (rootfs/usr/local/lib/bb-entrypoint.sh).
+# Setting ENTRYPOINT clears the base image's CMD, so it is restated here.
+ENV UPDATE_CHECK="true" \
+    UPDATE_CHECK_INTERVAL_HOURS="24" \
+    AON_IMAGE_REPO="allornothing/backblaze-personal"
+LABEL net.aon.fork="iamfoz/backblaze-64-personal-wine-container"
+ENTRYPOINT ["/usr/local/lib/bb-entrypoint.sh"]
+CMD ["/init"]

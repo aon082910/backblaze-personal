@@ -27,6 +27,8 @@ from urllib.parse import urlsplit
 sys.path.insert(0, "/usr/local/lib/bb-monitor")
 import bbapi
 import bbconfig
+import bbcontainer
+import bbcontainer_page
 import bbctl
 import bbdata
 import bbdismiss
@@ -39,6 +41,7 @@ import bbsettings
 import bbreport
 import bbtools
 import bbnotify
+import bbupdate
 import bbquiet
 import bbtimeline
 from bbdata import (BUILD_INFO, BUILD_LABEL, INT, eta_str, gather, human,
@@ -50,12 +53,15 @@ APP_NAME = "Backblaze 64"
 APP_COMPONENT = "Upload Monitor"
 APP_COPYRIGHT = "Copyright \u00a9 2026 Martyn Forryan"
 APP_LICENSE = "GNU Affero General Public License v3.0"
-APP_URL = "https://github.com/iamfoz/backblaze-64-personal-wine-container"
+# The source of this build, as the AGPL asks of a network service. It is a fork of
+# iamfoz/backblaze-64-personal-wine-container, credited below and in the README.
+APP_URL = "https://github.com/aon082910/backblaze-personal"
 
 # Contributed work credited in the About tab: (forum handle, one-line description).
 # An empty list hides the Thanks section, so a missing handle never ships as
 # placeholder text.
-CREDITS = [("rogman", "web monitor, themes & features")]
+CREDITS = [("rogman", "web monitor, themes & features"),
+           ("iamfoz", "the upstream container this is forked from (github.com/iamfoz/backblaze-64-personal-wine-container)")]
 
 
 
@@ -805,7 +811,7 @@ document.getElementById('switch').addEventListener('change', function(){
 document.addEventListener('keydown', function(e){
   var tg = e.target && e.target.tagName;
   if(tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
-  if(e.key >= '1' && e.key <= '6' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
+  if(e.key >= '1' && e.key <= '7' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
 });
 try {
   var t = localStorage.getItem('bbMonitorTheme');
@@ -1516,7 +1522,7 @@ document.getElementById('quiet-save').addEventListener('click', function(){
 document.addEventListener('keydown', function(e){
   var tg = e.target && e.target.tagName;
   if(tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
-  if(e.key >= '1' && e.key <= '6' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
+  if(e.key >= '1' && e.key <= '7' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
 });
 try {
   var t = localStorage.getItem('bbMonitorTheme');
@@ -2292,7 +2298,7 @@ document.getElementById('chips').addEventListener('click', function(e){
 document.addEventListener('keydown', function(e){
   var tg = e.target && e.target.tagName;
   if(tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
-  if(e.key >= '1' && e.key <= '6' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
+  if(e.key >= '1' && e.key <= '7' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
 });
 try {
   var t = localStorage.getItem('bbMonitorTheme');
@@ -2646,7 +2652,7 @@ document.getElementById('rep-refresh').addEventListener('click', loadReport);
 document.addEventListener('keydown', function(e){
   var tg = e.target && e.target.tagName;
   if(tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
-  if(e.key >= '1' && e.key <= '6' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
+  if(e.key >= '1' && e.key <= '7' && window.parent !== window) window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
 });
 try {
   var th = localStorage.getItem('bbMonitorTheme');
@@ -3096,6 +3102,8 @@ def metrics_text(api):
 
 
 # ---- HTTP server -----------------------------------------------------------
+CONTAINER_HTML = bbcontainer_page.html(THEME_CSS, PAGE_CSS)
+
 INDEX_HTML = """<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -4151,7 +4159,7 @@ async function tick(){
     if(typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
     if(e.key === 's'){ document.getElementById('settings-btn').click(); }
     else if(e.key === 'p'){ var pb = document.getElementById('pause-btn'); if(pb && pb.style.display !== 'none') pb.click(); }
-    else if(e.key >= '1' && e.key <= '6' && window.parent !== window){
+    else if(e.key >= '1' && e.key <= '7' && window.parent !== window){
       // The shell owns the tabs, so tell it. Same origin, so the target is exact.
       window.parent.postMessage({bb64: 'tab', n: Number(e.key)}, location.origin);
     }
@@ -4741,6 +4749,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/manage/wine":
             self._json(200, dict(bbwine.state(), schema=bbapi.SCHEMA))
             return True
+        if path == "/manage/container":
+            self._json(200, dict(bbcontainer.state(), schema=bbapi.SCHEMA))
+            return True
+        if path == "/manage/updates":
+            self._json(200, dict(bbupdate.snapshot(), schema=bbapi.SCHEMA))
+            return True
         if path == "/manage/doctor":
             self._json(200, dict(bbdoctor.load(), schema=bbapi.SCHEMA))
             return True
@@ -5048,6 +5062,34 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, dict(bbrecover.state(), schema=bbapi.SCHEMA))
             return
+        if path == "/manage/container":
+            # Names are looked up in bbcontainer.REGISTRY and every value is
+            # validated there, so nothing from the request names a file or a
+            # command. Secrets go in and never come back out.
+            try:
+                bbcontainer.save(body.get("changes"))
+            except ValueError as exc:
+                self._json(400, {"error": str(exc)})
+                return
+            self._json(200, dict(bbcontainer.state(), schema=bbapi.SCHEMA))
+            return
+        if path == "/manage/container/restart":
+            try:
+                bbcontainer.request_restart()
+            except (ValueError, OSError) as exc:
+                self._json(400, {"error": str(exc)})
+                return
+            print("[bb-monitor-web] container restart requested from the Container tab", flush=True)
+            self._json(200, {"ok": True, "schema": bbapi.SCHEMA})
+            return
+        if path == "/manage/updates/check":
+            try:
+                bbupdate.check_now(_fire_update)
+            except Exception as exc:
+                self._json(500, {"error": "the check failed: %s" % exc})
+                return
+            self._json(200, dict(bbupdate.snapshot(), schema=bbapi.SCHEMA))
+            return
         if path == "/manage/wine":
             # Only switches this Wine carries reach the store, as "0" or "1",
             # and bbwine refuses a set that would break the backup.
@@ -5196,6 +5238,15 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(payload)
             return
+        if path == "/container":
+            payload = CONTAINER_HTML.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if path == "/tools":
             payload = TOOLS_HTML.encode("utf-8")
             self.send_response(200)
@@ -5241,6 +5292,13 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
 
+def _fire_update(key, title, message):
+    """Send an update notice through the Settings tab's endpoints, if that event is on."""
+    conf = bbnotify.load()
+    if conf["events"].get(key):
+        bbnotify.fire(conf, key, title, message)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dump-rtt", action="store_true",
@@ -5276,6 +5334,7 @@ def main():
         return
 
     threading.Thread(target=_loop, daemon=True).start()
+    threading.Thread(target=bbupdate.loop, args=(_fire_update,), daemon=True).start()
 
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     print("bb-monitor-web listening on http://%s:%d/" % (args.host, args.port))

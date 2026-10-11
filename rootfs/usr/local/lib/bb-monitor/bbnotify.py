@@ -132,6 +132,15 @@ EVENTS = (
      "The Backblaze client is running a different version than it was. The container's "
      "updater installs the newest client at every start, so a change here is what to "
      "line up with a backup that has started misbehaving.", False),
+    ("image_update",  "Container image update",
+     "A newer image of this container is published. Update it from Unraid's Docker tab. "
+     "Checked once a day (UPDATE_CHECK).", False),
+    ("wine_update",   "Newer Wine",
+     "WineHQ has released a newer Wine than this container carries. The maintainer rebuilds the "
+     "image after testing, so an image update follows.", False),
+    ("client_update", "Newer Backblaze client",
+     "Backblaze is serving a client newer than the one installed. It installs at the next start "
+     "unless the client is pinned.", False),
 )
 URGENT = ("frozen", "stalled")
 
