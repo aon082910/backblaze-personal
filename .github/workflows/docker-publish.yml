@@ -130,7 +130,7 @@ jobs:
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && env.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -228,7 +228,8 @@ jobs:
             DOCKER_IMAGE_VERSION=${{ steps.meta.outputs.version }}
             BUILD_REV=${{ github.sha }}
             BUILD_NUMBER=${{ github.run_number }}
-          push: ${{ github.event_name != 'pull_request' }}
+          # Without the Docker Hub secrets the image is still built and smoke-tested, just not pushed.
+          push: ${{ github.event_name != 'pull_request' && env.DOCKERHUB_USERNAME != '' }}
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
@@ -285,6 +286,7 @@ jobs:
               mirrors = ["mirror.gcr.io"]
 
       - name: Log into registry ${{ env.REGISTRY }}
+        if: env.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -376,7 +378,7 @@ jobs:
             DOCKER_IMAGE_VERSION=beta
             BUILD_REV=${{ github.sha }}
             BUILD_NUMBER=${{ github.run_number }}
-          push: true
+          push: ${{ env.DOCKERHUB_USERNAME != '' }}
           platforms: linux/amd64
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:beta
           cache-from: type=local,src=/tmp/.buildx-cache-beta
@@ -458,7 +460,7 @@ jobs:
               mirrors = ["mirror.gcr.io"]
 
       - name: Log into registry ${{ env.REGISTRY }}
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && env.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -528,7 +530,7 @@ jobs:
           '
 
       - name: Push the patched image
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && env.DOCKERHUB_USERNAME != ''
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
         with:
           context: .
