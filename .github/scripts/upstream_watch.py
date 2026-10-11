@@ -286,7 +286,7 @@ def main():
                     "and a closed issue still stops it being filed twice.\n" % (detail, action, REPO))
             file_issue(title, body)
             filed.append((key, detail, action))
-            print("filed    %s" % title)
+            print("%s %s" % ("would file" if DRY else "filed   ", title))
     if filed:
         lines = ["%s" % d for _, d, _ in filed]
         notify("Backblaze container: %d update%s waiting" % (len(filed), "" if len(filed) == 1 else "s"),
